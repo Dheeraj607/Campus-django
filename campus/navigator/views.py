@@ -7,19 +7,20 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Event, Notification,Request
-from .serializers import EventSerializer, UserSerializer, NotificationSerializer, LoginSerializer,RequestSerializer
+from .models import Event, Notification, Request
+from .serializers import EventSerializer, UserSerializer, NotificationSerializer, LoginSerializer, RequestSerializer, \
+    PasswordResetSerializer
 
 
 # Create your views here.
-@api_view(['POST'])
-def age(request):
-    info = request.data
-    if info['age'] < 18:
-        result = 'not eligible for vote'
-    else:
-        result = 'eligible for vote'
-    return Response({'message': result}, status=status.HTTP_200_OK)
+# @api_view(['POST'])
+# def age(request):
+#     info = request.data
+#     if info['age'] < 18:
+#         result = 'not eligible for vote'
+#     else:
+#         result = 'eligible for vote'
+#     return Response({'message': result}, status=status.HTTP_200_OK)
 
 
 class EventViewSet(viewsets.ModelViewSet):
@@ -80,6 +81,7 @@ class NotificationView(APIView):
 def user_login(request):
     login_key = False
     admin_key = False
+    u_name = "None"
     sts = status.HTTP_403_FORBIDDEN
 
     # Use the LoginSerializer to validate input data
@@ -97,13 +99,16 @@ def user_login(request):
             if user.is_superuser:
                 admin_key = True
             login_key = True
+            u_name = user.username
             sts = status.HTTP_200_OK
         else:  # If authentication fails
             sts = status.HTTP_401_UNAUTHORIZED
     else:  # If serializer validation fails
         sts = status.HTTP_400_BAD_REQUEST
 
-    return Response({"login_key": login_key, "admin": admin_key,"username":user.username}, status=sts)
+    return Response({"login_key": login_key, "admin": admin_key, "username": u_name}, status=sts)
+
+
 class RequestViewSet(viewsets.ModelViewSet):
     # import pdb;pdb.set_trace()
     queryset = Request.objects.all()
@@ -140,6 +145,7 @@ def req_create(request):
 
     return Response({'message': "Success"}, status=status.HTTP_200_OK)
 
+
 @api_view(['GET'])
 def req_list(request):
     reqs = Request.objects.all()
@@ -158,25 +164,37 @@ def req_update(request):
         req = Request.objects.get(id=info['request_id'])  # Find the request by its ID
     except Request.DoesNotExist:
         return Response({'message': 'Request not found'}, status=status.HTTP_400_BAD_REQUEST)
-    req.replay=info.get('replay', req.replay)
+    req.replay = info.get('replay', req.replay)
 
     req.status = info.get('status', req.status)  # Can update the status as well
 
     req.save()  # Save the updated request
 
     return Response({'message': "Request updated successfully"}, status=status.HTTP_200_OK)
+
+
 @api_view(['GET'])
-def req_list_user(request,username):
-    user=User.objects.get(username=username)
+def req_list_user(request, username):
+    user = User.objects.get(username=username)
     reqs = Request.objects.filter(req_from=user)
     serializer = RequestSerializer(reqs, many=True)  # Serialize the queryset
     # user=User.objects.get(id=serializer.data.req_from.id)
     return Response({'message': "Success", 'req': serializer.data}, status=status.HTTP_200_OK)
 
+
 @api_view(['GET'])
 def user_list(request):
-    user=User.objects.all()
+    user = User.objects.all()
 
     serializer = UserSerializer(user, many=True)  # Serialize the queryset
     # user=User.objects.get(id=serializer.data.req_from.id)
     return Response({'message': "Success", 'req': serializer.data}, status=status.HTTP_200_OK)
+
+
+class PasswordResetView(APIView):
+    def post(self, request):
+        serializer = PasswordResetSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"message": "Password has been reset successfully."}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

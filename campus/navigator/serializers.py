@@ -1,6 +1,6 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers, viewsets
-from .models import Event, Notification,Request
+from .models import Event, Notification, Request
 
 
 class EventSerializer(serializers.ModelSerializer):
@@ -10,11 +10,11 @@ class EventSerializer(serializers.ModelSerializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
-    confirm_password = serializers.CharField(write_only=True)# Add full_name field
+    confirm_password = serializers.CharField(write_only=True)  # Add full_name field
 
     class Meta:
         model = User
-        fields = ['username', 'email', 'password', 'confirm_password', 'first_name','last_name']
+        fields = ['username', 'email', 'password', 'confirm_password', 'first_name', 'last_name']
         extra_kwargs = {
             'password': {'write_only': True},
             'email': {'required': True}
@@ -34,8 +34,8 @@ class UserSerializer(serializers.ModelSerializer):
             username=validated_data['username'],
             email=validated_data['email'],
             password=validated_data['password'],
-            first_name = validated_data['first_name'],
-            last_name = validated_data['last_name']
+            first_name=validated_data['first_name'],
+            last_name=validated_data['last_name']
         )
         return user
 
@@ -43,14 +43,13 @@ class UserSerializer(serializers.ModelSerializer):
 class NotificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notification
-        fields = ['id', 'date_created', 'message','type']
+        fields = ['id', 'date_created', 'message', 'type']
         read_only_fields = ['date_created']
 
 
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField(required=True)
     password = serializers.CharField(required=True, write_only=True)
-
 
 
 class RequestSerializer(serializers.ModelSerializer):
@@ -64,7 +63,7 @@ class RequestSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'req_from', 'message', 'date',
             'from_time', 'to_time', 'date_created',
-            'status', 'replay','username'
+            'status', 'replay', 'username'
         ]
         read_only_fields = ['id', 'date_created', 'status', 'replay']
 
@@ -72,3 +71,27 @@ class RequestSerializer(serializers.ModelSerializer):
         # Ensure the status is set to 0 ("Pending") regardless of input
         validated_data['status'] = 0
         return super().create(validated_data)
+
+
+class PasswordResetSerializer(serializers.Serializer):
+    username = serializers.CharField(max_length=150, required=True)
+    password = serializers.CharField(max_length=128, write_only=True)
+    confirm_password = serializers.CharField(max_length=128, write_only=True)
+
+    def validate(self, data):
+        if data['password'] != data['confirm_password']:
+            raise serializers.ValidationError({"password": "Passwords do not match."})
+        return data
+
+    def validate_username(self, value):
+        if not User.objects.filter(username=value).exists():
+            raise serializers.ValidationError("User not found.")
+        return value
+
+    def save(self):
+        username = self.validated_data['username']
+        password = self.validated_data['password']
+        user = User.objects.get(username=username)
+        user.set_password(password)
+        user.save()
+        return user

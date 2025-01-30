@@ -3,7 +3,7 @@ from tkinter.font import names
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 from .views import EventViewSet, UserCreateView, NotificationView, user_login, RequestViewSet, req_create, req_list, \
-    req_update, req_list_user, user_list
+    req_update, req_list_user, user_list,PasswordResetView
 
 router = DefaultRouter()
 router.register(r'events', EventViewSet, basename='event')
@@ -18,5 +18,5 @@ urlpatterns = [
     path('req_update/', req_update, name='req_update'),
     path('req_list_user/<username>', req_list_user, name='req_list_user'),
     path('user_list/', user_list, name='user_list'),
-
+    path('password-reset/',PasswordResetView.as_view(), name='password_reset')
 ]
